@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en" class="dark">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>APEX VISION — Real-Time Object & Defect Counter</title>
+    <meta name="description" content="Production-grade real-time computer vision dashboard for object detection, tracking, defect analysis, and quality control using in-browser AI models." />
+    <meta name="theme-color" content="#0f172a" />
+
+    <!-- Favicon -->
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%233b82f6'/><text y='.9em' font-size='70' x='12'>👁</text></svg>" />
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet" />
+
+    <!-- Prevent FOUC: force dark bg before JS loads -->
+    <style>
+      html, body { background: #0f172a; margin: 0; }
+      #root { min-height: 100vh; }
+    </style>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
