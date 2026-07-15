@@ -51,7 +51,16 @@ export const EventLog: React.FC = () => {
   const exportPDF = async () => {
     setIsExporting(true);
     try {
-      await generatePDFReport(stats, eventLogs);
+      const mockSession = {
+        id: activeSessionId || `SESS-LIVE-${Date.now()}`,
+        startTime: Date.now() - 1000 * 60 * 5, // mock start 5m ago
+        endTime: Date.now(),
+        totalCounts: stats.classDistribution,
+        defectCount: stats.defectCount,
+        totalDetected: stats.totalDetected,
+        logs: eventLogs,
+      };
+      await generatePDFReport(mockSession);
     } catch (e) {
       alert('PDF export failed. Please try again.');
     } finally {

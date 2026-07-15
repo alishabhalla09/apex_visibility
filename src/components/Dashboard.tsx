@@ -15,7 +15,6 @@ import {
   Moon,
   Play,
   Square,
-  Clock,
   Trash2,
   FileText,
   ChevronDown,
@@ -27,7 +26,6 @@ import {
   Radio,
   Zap,
   TrendingUp,
-  AlertTriangle,
 } from 'lucide-react';
 
 export const Dashboard: React.FC = () => {
@@ -36,7 +34,6 @@ export const Dashboard: React.FC = () => {
     startSession,
     endSession,
     stats,
-    eventLogs,
     settings,
     presenceStatus,
     activeTracks,

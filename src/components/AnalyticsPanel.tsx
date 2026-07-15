@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useDashboardStore } from '../context/DashboardStore';
 import {
   LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid,
-  Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend
+  Tooltip, ResponsiveContainer, PieChart, Pie, Cell
 } from 'recharts';
 import { TrendingUp, BarChart3, PieChart as PieIcon } from 'lucide-react';
 

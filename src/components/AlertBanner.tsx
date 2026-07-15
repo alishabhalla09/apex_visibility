@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { useDashboardStore } from '../context/DashboardStore';
-import { AlertTriangle, Bell, X, ShieldAlert } from 'lucide-react';
+import { AlertTriangle, X, ShieldAlert } from 'lucide-react';
 
 interface Toast {
   id: string;
