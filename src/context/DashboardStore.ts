@@ -328,7 +328,7 @@ export const useDashboardStore = create<DashboardState>((set, get) => ({
 
     set({
       activeTracks: updatedTracks,
-      eventLogs: [...newLogs, ...eventLogs].slice(0, 100),
+      eventLogs: [...newLogs, ...eventLogs].slice(0, 500),
       presenceStatus: newPresenceStatus,
       lastItemSeenAt: newLastItemSeenAt,
       gateTriggerFlash: triggerGateFlash ? true : get().gateTriggerFlash,

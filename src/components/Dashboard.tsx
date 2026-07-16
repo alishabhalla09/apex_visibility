@@ -8,6 +8,7 @@ import { PresenceIndicator } from './PresenceIndicator';
 import { dbService } from '../services/db';
 import type { SessionHistoryItem } from '../types';
 import { generatePDFReport } from '../services/report';
+import { GalleryPanel } from './GalleryPanel';
 import {
   Terminal,
   History,
@@ -26,6 +27,7 @@ import {
   Radio,
   Zap,
   TrendingUp,
+  Image,
 } from 'lucide-react';
 
 export const Dashboard: React.FC = () => {
@@ -37,9 +39,10 @@ export const Dashboard: React.FC = () => {
     settings,
     presenceStatus,
     activeTracks,
+    eventLogs,
   } = useDashboardStore();
 
-  const [activeTab, setActiveTab] = useState<'live' | 'history'>('live');
+  const [activeTab, setActiveTab] = useState<'live' | 'gallery' | 'history'>('live');
   const [theme, setTheme] = useState<'light' | 'dark'>('dark');
   const [historySessions, setHistorySessions] = useState<SessionHistoryItem[]>([]);
   const [expandedSessionId, setExpandedSessionId] = useState<string | null>(null);
@@ -269,6 +272,25 @@ export const Dashboard: React.FC = () => {
               <Zap className="h-3.5 w-3.5" />
             </div>
             <span>Live Console</span>
+          </button>
+
+          <button
+            onClick={() => setActiveTab('gallery')}
+            className={`flex items-center space-x-3 w-full px-3.5 py-3 rounded-xl text-sm font-bold transition-all ${
+              activeTab === 'gallery'
+                ? 'bg-blue-500/10 text-blue-400 border border-blue-500/20 shadow-lg shadow-blue-500/5'
+                : 'text-slate-500 hover:bg-slate-800/60 hover:text-slate-200'
+            }`}
+          >
+            <div className={`p-1.5 rounded-lg ${activeTab === 'gallery' ? 'bg-blue-500/20' : 'bg-slate-800'}`}>
+              <Image className="h-3.5 w-3.5" />
+            </div>
+            <span>Product Gallery</span>
+            {eventLogs.length > 0 && (
+              <span className="ml-auto bg-slate-700 text-slate-300 text-[9px] font-mono font-bold px-1.5 py-0.5 rounded-full animate-pulse">
+                {eventLogs.length}
+              </span>
+            )}
           </button>
 
           <button
@@ -566,6 +588,12 @@ export const Dashboard: React.FC = () => {
                   </div>
                 )}
               </div>
+            </div>
+          )}
+          {/* ── PRODUCT GALLERY TAB ────────────────────────── */}
+          {activeTab === 'gallery' && (
+            <div className="flex flex-col gap-5 animate-fade-in">
+              <GalleryPanel />
             </div>
           )}
         </main>
