@@ -93,7 +93,7 @@ export class CVEngine {
     nmsThreshold = 0.45
   ): Promise<Detection[]> {
     if (modelType === 'simulation' || modelType === 'face-api') {
-      return this.runSimulationDetection(source, confidenceThreshold);
+      return this.runSimulationDetection(confidenceThreshold);
     }
 
     if (modelType === 'coco-ssd') {
@@ -262,74 +262,9 @@ export class CVEngine {
    * to make presence/absence detection meaningful.
    */
   private runSimulationDetection(
-    source: HTMLVideoElement | HTMLImageElement | HTMLCanvasElement,
     confThreshold: number
   ): Detection[] {
-    const width = source instanceof HTMLVideoElement ? source.videoWidth : source.width || 640;
-    const height = source instanceof HTMLVideoElement ? source.videoHeight : source.height || 480;
-    const now = Date.now();
-
-    // ── Phase switching ──────────────────────────────────────
-    if (now > this.simPhaseUntil) {
-      if (this.simPhase === 'active') {
-        // Switch to GAP: 2–5 seconds empty belt
-        this.simPhase = 'gap';
-        this.simPhaseUntil = now + 2000 + Math.random() * 3000;
-      } else {
-        // Switch to ACTIVE: 4–8 seconds of item flow
-        this.simPhase = 'active';
-        this.simPhaseUntil = now + 4000 + Math.random() * 4000;
-      }
-    }
-
-    // ── Spawn items only during ACTIVE phase ─────────────────
-    if (this.simPhase === 'active') {
-      this.simSpawnAccumulator++;
-      // Spawn one item every ~20 frames (~0.67s at 30fps) when active
-      if (this.simSpawnAccumulator >= 20 && this.simObjects.length < 5) {
-        this.simSpawnAccumulator = 0;
-
-        const isDefect = Math.random() < 0.15; // 15% defect rate
-        const defectTypes = ['scratch', 'dent', 'crack', 'missing_part'];
-        const defectType = isDefect ? defectTypes[Math.floor(Math.random() * defectTypes.length)] : undefined;
-        
-        let severity: 'minor' | 'major' | 'critical' | undefined;
-        if (isDefect) {
-          const rand = Math.random();
-          severity = rand > 0.85 ? 'critical' : rand > 0.5 ? 'major' : 'minor';
-        }
-
-        this.simObjects.push({
-          id: this.nextSimId++,
-          x: -80,
-          y: height * 0.45 + (Math.random() - 0.5) * 60,
-          w: 60 + Math.random() * 40,
-          h: 60 + Math.random() * 40,
-          className: isDefect ? defectType! : 'electronic_board',
-          speed: 2.5 + Math.random() * 2,
-          defectType,
-          severity,
-          confidence: 0.82 + Math.random() * 0.17,
-        });
-      }
-    }
-
-    // Move objects across belt and remove off-screen ones
-    this.simObjects = this.simObjects
-      .map(obj => ({ ...obj, x: obj.x + obj.speed }))
-      .filter(obj => obj.x < width + 100);
-
-    // Draw product graphics on conveyor belt if source is a canvas
-    if (source instanceof HTMLCanvasElement) {
-      const ctx = source.getContext('2d');
-      if (ctx) {
-        this.simObjects.forEach((obj) => {
-          this.drawProceduralPCB(ctx, obj.x, obj.y, obj.w, obj.h, !!obj.defectType, obj.defectType);
-        });
-      }
-    }
-
-    // Return detections with realistic jitter
+    // Return detections with realistic jitter for currently active simObjects
     return this.simObjects.map((obj) => {
       const jitterX = (Math.random() - 0.5) * 4;
       const jitterY = (Math.random() - 0.5) * 4;
@@ -348,6 +283,124 @@ export class CVEngine {
         confidence: obj.confidence - Math.random() * 0.05,
       };
     }).filter(d => d.confidence >= confThreshold);
+  }
+
+  /**
+   * Updates the positions of simulation elements, spawns new items,
+   * and draws the complete animated conveyor belt background + PCB images.
+   * Runs at 60fps in the animation frame loop.
+   */
+  public updateAndDrawSimulation(
+    canvas: HTMLCanvasElement,
+    presenceStatus: 'present' | 'absent' | 'idle'
+  ): void {
+    const ctx = canvas.getContext('2d')!;
+    const w = canvas.width;
+    const h = canvas.height;
+    const now = Date.now();
+    const isGap = presenceStatus === 'absent';
+
+    // 1. Draw Conveyor Belt Lane Background
+    const floorGrad = ctx.createLinearGradient(0, 0, 0, h);
+    floorGrad.addColorStop(0, '#1e293b');
+    floorGrad.addColorStop(1, '#0f172a');
+    ctx.fillStyle = floorGrad;
+    ctx.fillRect(0, 0, w, h);
+
+    // Status indicator text at top
+    ctx.font = 'bold 11px monospace';
+    ctx.fillStyle = isGap ? '#ef4444' : '#10b981';
+    ctx.fillText(
+      isGap ? '⚠  GAP — NO ITEM DETECTED' : '◉  ACTIVE — CONVEYOR RUNNING',
+      12, 22
+    );
+
+    // Phase indicator bar at top
+    ctx.fillStyle = isGap ? 'rgba(239,68,68,0.15)' : 'rgba(16,185,129,0.08)';
+    ctx.fillRect(0, 0, w, 30);
+    ctx.strokeStyle = isGap ? 'rgba(239,68,68,0.3)' : 'rgba(16,185,129,0.2)';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(0, 0, w, 30);
+
+    // Conveyor track lane — dimmer during gap
+    ctx.fillStyle = isGap ? '#1e293b' : '#334155';
+    ctx.fillRect(0, h * 0.4, w, h * 0.25);
+    ctx.strokeStyle = isGap ? '#334155' : '#475569';
+    ctx.lineWidth = 4;
+    ctx.strokeRect(-5, h * 0.4, w + 10, h * 0.25);
+
+    // Roller lines — slower / dimmer during gap
+    const speed = isGap ? 5 : 20;
+    ctx.strokeStyle = '#1e293b';
+    ctx.lineWidth = 2;
+    for (let rx = (Date.now() / speed) % 80; rx < w; rx += 80) {
+      ctx.beginPath();
+      ctx.moveTo(rx, h * 0.4);
+      ctx.lineTo(rx, h * 0.65);
+      ctx.stroke();
+    }
+
+    // WAITING overlay text in belt area during gap
+    if (isGap) {
+      ctx.font = 'bold 16px monospace';
+      ctx.fillStyle = 'rgba(239,68,68,0.4)';
+      ctx.textAlign = 'center';
+      ctx.fillText('— WAITING FOR ITEM —', w / 2, h * 0.55);
+      ctx.textAlign = 'left';
+    }
+
+    // 2. Physics: Phase switching
+    if (now > this.simPhaseUntil) {
+      if (this.simPhase === 'active') {
+        this.simPhase = 'gap';
+        this.simPhaseUntil = now + 2000 + Math.random() * 3000;
+      } else {
+        this.simPhase = 'active';
+        this.simPhaseUntil = now + 4000 + Math.random() * 4000;
+      }
+    }
+
+    // 3. Physics: Spawn items only during ACTIVE phase
+    if (this.simPhase === 'active') {
+      this.simSpawnAccumulator++;
+      // Spawn one item every ~40 frames (~0.67s at 60fps) when active
+      if (this.simSpawnAccumulator >= 40 && this.simObjects.length < 5) {
+        this.simSpawnAccumulator = 0;
+
+        const isDefect = Math.random() < 0.15; // 15% defect rate
+        const defectTypes = ['scratch', 'dent', 'crack', 'missing_part'];
+        const defectType = isDefect ? defectTypes[Math.floor(Math.random() * defectTypes.length)] : undefined;
+        
+        let severity: 'minor' | 'major' | 'critical' | undefined;
+        if (isDefect) {
+          const rand = Math.random();
+          severity = rand > 0.85 ? 'critical' : rand > 0.5 ? 'major' : 'minor';
+        }
+
+        this.simObjects.push({
+          id: this.nextSimId++,
+          x: -80,
+          y: h * 0.45 + (Math.random() - 0.5) * 60,
+          w: 60 + Math.random() * 40,
+          h: 60 + Math.random() * 40,
+          className: isDefect ? defectType! : 'electronic_board',
+          speed: 2.5 + Math.random() * 2,
+          defectType,
+          severity,
+          confidence: 0.82 + Math.random() * 0.17,
+        });
+      }
+    }
+
+    // 4. Physics: Move objects across belt and remove off-screen ones
+    this.simObjects = this.simObjects
+      .map(obj => ({ ...obj, x: obj.x + obj.speed }))
+      .filter(obj => obj.x < w + 100);
+
+    // 5. Drawing: Render procedural products
+    this.simObjects.forEach((obj) => {
+      this.drawProceduralPCB(ctx, obj.x, obj.y, obj.w, obj.h, !!obj.defectType, obj.defectType);
+    });
   }
 
   /**

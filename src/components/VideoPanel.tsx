@@ -158,7 +158,7 @@ export const VideoPanel: React.FC = () => {
 
         // Draw video frame or simulation output
         if (currentFeedSource === 'simulation') {
-          drawConveyorBelt(simCanvasRef.current!);
+          cvEngine.updateAndDrawSimulation(simCanvasRef.current!, presenceStatus);
           ctx.drawImage(simCanvasRef.current!, 0, 0);
         } else {
           ctx.drawImage(sourceElement, 0, 0, width, height);
@@ -341,62 +341,7 @@ export const VideoPanel: React.FC = () => {
     }
   };
 
-  // Pre-drawn canvas context simulation for conveyer belt graphics
-  const drawConveyorBelt = (canvas: HTMLCanvasElement) => {
-    const ctx = canvas.getContext('2d')!;
-    const w = canvas.width;
-    const h = canvas.height;
-    const isGap = presenceStatus === 'absent';
 
-    // Background gradient
-    const floorGrad = ctx.createLinearGradient(0, 0, 0, h);
-    floorGrad.addColorStop(0, '#1e293b');
-    floorGrad.addColorStop(1, '#0f172a');
-    ctx.fillStyle = floorGrad;
-    ctx.fillRect(0, 0, w, h);
-
-    // Status indicator text at top
-    ctx.font = 'bold 11px monospace';
-    ctx.fillStyle = isGap ? '#ef4444' : '#10b981';
-    ctx.fillText(
-      isGap ? '⚠  GAP — NO ITEM DETECTED' : '◉  ACTIVE — CONVEYOR RUNNING',
-      12, 22
-    );
-
-    // Phase indicator bar at top
-    ctx.fillStyle = isGap ? 'rgba(239,68,68,0.15)' : 'rgba(16,185,129,0.08)';
-    ctx.fillRect(0, 0, w, 30);
-    ctx.strokeStyle = isGap ? 'rgba(239,68,68,0.3)' : 'rgba(16,185,129,0.2)';
-    ctx.lineWidth = 1;
-    ctx.strokeRect(0, 0, w, 30);
-
-    // Conveyor track lane — dimmer during gap
-    ctx.fillStyle = isGap ? '#1e293b' : '#334155';
-    ctx.fillRect(0, h * 0.4, w, h * 0.25);
-    ctx.strokeStyle = isGap ? '#334155' : '#475569';
-    ctx.lineWidth = 4;
-    ctx.strokeRect(-5, h * 0.4, w + 10, h * 0.25);
-
-    // Roller lines — slower / dimmer during gap
-    const speed = isGap ? 5 : 20;
-    ctx.strokeStyle = '#1e293b';
-    ctx.lineWidth = 2;
-    for (let x = (Date.now() / speed) % 80; x < w; x += 80) {
-      ctx.beginPath();
-      ctx.moveTo(x, h * 0.4);
-      ctx.lineTo(x, h * 0.65);
-      ctx.stroke();
-    }
-
-    // WAITING overlay text in belt area during gap
-    if (isGap) {
-      ctx.font = 'bold 16px monospace';
-      ctx.fillStyle = 'rgba(239,68,68,0.4)';
-      ctx.textAlign = 'center';
-      ctx.fillText('— WAITING FOR ITEM —', w / 2, h * 0.55);
-      ctx.textAlign = 'left';
-    }
-  };
 
   // Click handler to register coordinate nodes on canvas overlay
   const handleCanvasClick = (e: React.MouseEvent<HTMLCanvasElement>) => {
