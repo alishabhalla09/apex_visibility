@@ -319,6 +319,16 @@ export class CVEngine {
       .map(obj => ({ ...obj, x: obj.x + obj.speed }))
       .filter(obj => obj.x < width + 100);
 
+    // Draw product graphics on conveyor belt if source is a canvas
+    if (source instanceof HTMLCanvasElement) {
+      const ctx = source.getContext('2d');
+      if (ctx) {
+        this.simObjects.forEach((obj) => {
+          this.drawProceduralPCB(ctx, obj.x, obj.y, obj.w, obj.h, !!obj.defectType, obj.defectType);
+        });
+      }
+    }
+
     // Return detections with realistic jitter
     return this.simObjects.map((obj) => {
       const jitterX = (Math.random() - 0.5) * 4;
@@ -338,6 +348,157 @@ export class CVEngine {
         confidence: obj.confidence - Math.random() * 0.05,
       };
     }).filter(d => d.confidence >= confThreshold);
+  }
+
+  /**
+   * Draws a procedurally generated electronic circuit board (PCB)
+   * on the conveyor simulation canvas, with visual representations of defects.
+   */
+  private drawProceduralPCB(
+    ctx: CanvasRenderingContext2D,
+    x: number,
+    y: number,
+    w: number,
+    h: number,
+    isDefect: boolean,
+    defectType?: string
+  ): void {
+    ctx.save();
+
+    // 1. Draw Green Solder Mask Board Base
+    ctx.fillStyle = '#064e3b'; // deep industrial green
+    ctx.fillRect(x, y, w, h);
+
+    // Beveled corner / edge board border highlight
+    ctx.strokeStyle = '#10b981'; // bright green highlight border
+    ctx.lineWidth = 1.5;
+    ctx.strokeRect(x, y, w, h);
+
+    // 2. Copper Contacts along the top and bottom edges (golden pads)
+    ctx.fillStyle = '#d97706'; // copper gold
+    const padW = 3;
+    const padH = 5;
+    for (let px = x + 8; px < x + w - 8; px += 7) {
+      ctx.fillRect(px, y + 1, padW, padH); // top pads
+      ctx.fillRect(px, y + h - 1 - padH, padW, padH); // bottom pads
+    }
+
+    // 3. Copper Solder Tracks (Traces)
+    ctx.strokeStyle = '#047857'; // lighter trace green
+    ctx.lineWidth = 1;
+    
+    // Horizontal traces
+    ctx.beginPath();
+    ctx.moveTo(x + 10, y + h * 0.3);
+    ctx.lineTo(x + w * 0.4, y + h * 0.3);
+    ctx.lineTo(x + w * 0.5, y + h * 0.5);
+    ctx.lineTo(x + w - 10, y + h * 0.5);
+    ctx.stroke();
+
+    ctx.beginPath();
+    ctx.moveTo(x + 10, y + h * 0.7);
+    ctx.lineTo(x + w * 0.3, y + h * 0.7);
+    ctx.lineTo(x + w * 0.45, y + h * 0.45);
+    ctx.lineTo(x + w - 10, y + h * 0.45);
+    ctx.stroke();
+
+    // 4. Integrated Circuit (Main MCU chip)
+    const chipW = w * 0.35;
+    const chipH = h * 0.35;
+    const chipX = x + (w - chipW) / 2;
+    const chipY = y + (h - chipH) / 2;
+
+    ctx.fillStyle = '#0f172a'; // slate-900 chip packaging
+    ctx.fillRect(chipX, chipY, chipW, chipH);
+
+    // Chip notch indicator
+    ctx.fillStyle = '#1e293b';
+    ctx.beginPath();
+    ctx.arc(chipX, chipY + chipH / 2, 2, -Math.PI / 2, Math.PI / 2);
+    ctx.fill();
+
+    // Silver MCU pins
+    ctx.fillStyle = '#94a3b8'; // silver pins
+    for (let pinX = chipX + 3; pinX < chipX + chipW - 2; pinX += 5) {
+      ctx.fillRect(pinX, chipY - 2, 1.5, 2); // top pins
+      ctx.fillRect(pinX, chipY + chipH, 1.5, 2); // bottom pins
+    }
+
+    // 5. Discrete Components (Capacitors and Resistors)
+    // Tantalum Capacitor (Yellow/Amber box)
+    ctx.fillStyle = '#b45309'; // amber
+    ctx.fillRect(x + 8, y + 8, 7, 10);
+    ctx.fillStyle = '#d97706'; // positive bar indicator
+    ctx.fillRect(x + 8, y + 8, 7, 2.5);
+
+    // Resistors (Small black/silver packs)
+    ctx.fillStyle = '#1e293b';
+    ctx.fillRect(x + w - 15, y + 8, 5, 8);
+    ctx.fillStyle = '#cbd5e1';
+    ctx.fillRect(x + w - 15, y + 8, 5, 1.5);
+    ctx.fillRect(x + w - 15, y + 8 + 6.5, 5, 1.5);
+
+    // Second Chip (Unless it is missing_part defect)
+    if (defectType !== 'missing_part') {
+      ctx.fillStyle = '#1e293b'; // EEPROM chip
+      ctx.fillRect(x + 8, y + h - 18, 12, 10);
+      ctx.fillStyle = '#64748b'; // pins
+      for (let px = x + 10; px < x + 19; px += 3) {
+        ctx.fillRect(px, y + h - 20, 1.2, 2);
+        ctx.fillRect(px, y + h - 8, 1.2, 2);
+      }
+    } else {
+      // Missing chip outline (exposed copper pads indicating part is absent)
+      ctx.strokeStyle = '#d97706'; // copper pads outline
+      ctx.lineWidth = 1;
+      ctx.strokeRect(x + 8, y + h - 18, 12, 10);
+      
+      // Draw copper solder pads on board where chip pins would sit
+      ctx.fillStyle = '#d97706';
+      for (let px = x + 10; px < x + 19; px += 3) {
+        ctx.fillRect(px, y + h - 20, 1.2, 1.5);
+        ctx.fillRect(px, y + h - 9.5, 1.2, 1.5);
+      }
+    }
+
+    // 6. Draw Visual Defects
+    if (isDefect) {
+      if (defectType === 'scratch') {
+        // Long diagonal bright scratch
+        ctx.strokeStyle = '#f1f5f9'; // white scratch path
+        ctx.lineWidth = 2.5;
+        ctx.beginPath();
+        ctx.moveTo(x + 5, y + 5);
+        ctx.lineTo(x + w - 10, y + h - 10);
+        ctx.stroke();
+
+        ctx.strokeStyle = '#ef4444'; // red outline highlight
+        ctx.lineWidth = 1;
+        ctx.stroke();
+      } else if (defectType === 'dent') {
+        // Depressed dark indentation shadow
+        ctx.fillStyle = 'rgba(0,0,0,0.6)';
+        ctx.beginPath();
+        ctx.arc(x + w * 0.3, y + h * 0.35, 7, 0, 2 * Math.PI);
+        ctx.fill();
+
+        ctx.strokeStyle = '#b91c1c'; // rust red dent border
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+      } else if (defectType === 'crack') {
+        // Jagged black fracture lines crossing board
+        ctx.strokeStyle = '#000000';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(x + w * 0.6, y);
+        ctx.lineTo(x + w * 0.55, y + h * 0.35);
+        ctx.lineTo(x + w * 0.65, y + h * 0.65);
+        ctx.lineTo(x + w * 0.5, y + h);
+        ctx.stroke();
+      }
+    }
+
+    ctx.restore();
   }
 }
 
